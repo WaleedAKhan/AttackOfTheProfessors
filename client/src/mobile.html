@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<title>Mobile Controller</title>
+<meta name="viewport" content="width=device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+
+<link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css" />
+<script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
+<script src="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+
+<link rel="stylesheet" href="style2.css">
+</head>
+
+
+<body >
+
+
+
+
+
+<div id="imgContainer">
+
+<h1 id = "onlyHeader"> Pick a character to play with!</h1>
+
+<div id="row1">
+<img id="racc" class="imgs" src="../img/student3/static.png"  />
+<img id="girl" class="imgs" src="../img/student0/static.png"   />
+</div>
+
+<div id="row2">
+<img id="boy" class="imgs" src="../img/student1/walk1.png"   />
+<img id="tallGuy" class="imgs" src="../img/student2/static.png"  /> 
+</div>
+
+</div>
+
+<canvas style="background-color:#ff0000" id="fireSpace" width="1500" height="700"></canvas>
+
+
+<audio id="shot" hidden="true">
+  <source src="Fire.mp3" type="audio/mpeg">
+</audio>	
+
+
+
+</body>
+		
+</html>
+
+<script src = "socket.io.js"></script>
+<script>
+
+
+$(document).ready(function(){
+		  $("#fireSpace").css("display", "none");
+		   
+		  // tapping an image fire this: 
+			$(".imgs").on("tap",function(){
+				var tappedImg = $(this).attr('id');
+				console.log("tapped image: "+ tappedImg);
+				
+				var studentType;
+				if(tappedImg == "girl"){
+						studentType = 0;
+				}
+				
+				else if(tappedImg == "boy"){
+						studentType = 1;
+				}
+				
+				else if(tappedImg == "tallGuy"){
+						studentType = 2;
+				}
+				
+				else {
+					studentType = 3;
+				}
+				
+				console.log("studentType is: "+studentType);
+				
+				//hide container div
+				$("#imgContainer").css("display", "none");
+				//show our canvas 
+				$("#fireSpace").css("display", "block");
+				
+				 mobileConnect(studentType);
+
+				
+				
+				/* $("#shot").get(0).play();
+				setTimeout(function(){ 
+					$("#shot").get(0).pause(); 
+					$("#shot").get(0).currentTime = 0;
+					}, 250); */
+					
+			});
+			 
+		});	
+
+
+
+
+
+//Unset Player ID.
+id = -1;
+// Alpha Beta and Gamma for mobile gyroscope.
+a = 0 ;
+b = 0;
+g = 0;
+
+var socket = io();
+
+function  mobileConnect(stype){
+
+socket.emit('MobileConnected', {id:socket.id, type:stype});
+}
+
+
+socket.on('setID', function(data){
+		//If ID is not set yet, set it.
+		if(id == -1){
+			id = data.id;
+		}
+		console.log('ID is' + id);
+		});
+
+function fire(){
+	console.log("fire triggered");
+	socket.emit('fire', {beta:b, id:id});
+	navigator.vibrate(25);
+}
+
+/*
+socket.on('server', function(data){
+			console.log("From Server");
+		});
+	*/
+
+socket.on('gameOverMobile', function(data){
+	alert('GameOWER');
+	socket.disconnect();
+
+});
+
+	
+function motionListener(event){
+	a = event.alpha;
+	b = event.beta;
+	g = event.gamma;
+	
+	
+	socket.emit('mobileMotion', {a:a, b:b, g:g, id:id});
+	
+
+}
+
+
+
+//Event listener for Fire - faster to use a tap event then a button click event to issue fire commands over the network
+$("#fireSpace").on("tap",function(){
+	fire();
+	
+	if( $("#shot").get(0).paused == true){
+	$("#shot").get(0).play();
+	
+	setTimeout(function(){ 
+		$("#shot").get(0).pause(); 
+		$("#shot").get(0).currentTime = 0.05;
+		}, 120);
+	}
+	/*while($("#shot").get(0).currentTime < 0.25) { 
+          
+		}
+	$("#shot").get(0).pause();  
+	$("#shot").currentTime = 0;	//reset playback time to 0 - beginning of audio clip */
+});
+
+//Add event listener for device orientation updates
+if (window.DeviceOrientationEvent) {
+        window.addEventListener("deviceorientation", motionListener);
+      }
+
+
+</script>
+
